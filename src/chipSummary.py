@@ -479,7 +479,7 @@ def make_param_string(d):
     return result.strip()
 
 
-def peak_to_target_genes(peak_file, bedmap_range,dbg=0):
+def peak_to_target_genes(peak_file, bedmap_range,ANNOTATION_FILE,dbg=0):
 
     cmd = 'bedmap --echo --echo-map-id-uniq --delim \'\t\' ' \
           + '--range ' + bedmap_range \
@@ -607,7 +607,8 @@ def main(f,dbg= 0,reCallPeak=0,gPar= None):
         gene_lists = {} # a dictionary of form d  = {'condition1': {'AT1G12345':'2.3', 'AT1G12346':'1.2'} }
         
 
-def process(k=None,npkFile=None,gPar= None,dbg = 0):
+def process(k=None,npkFile=None,gPar= None,dbg = 0,
+           ANNOTATION_FILE=None):
     if k is None:
         assert npkFile,'must specify one arg'
         k = npkFile.rsplit('.',1)[0].split('/')[-1]
@@ -729,6 +730,9 @@ def peakSummary(npkFS,gPar = None,dbg=0,
                FC    = 1.5,
                PVALUE=0.01,
                QVALUE=0.0005,
+                maxDist = 1500,
+                DIR='test',
+                ref = None,                
                 **kwargs
                ):
     gPar = gPar or {
@@ -736,12 +740,25 @@ def peakSummary(npkFS,gPar = None,dbg=0,
     "PVALUE": PVALUE, 
     "QVALUE": QVALUE, 
     "PAIRWISE_COMPARE": "Y", 
-    "TARGET_RANGE": "3000", 
+    "TARGET_RANGE": maxDist, 
     "TITLE": "testRun"
 }
     
+    
+    os.system('mkdir -p %s'%DIR)
+    os.chdir(DIR)
+    cmd= '''
+mkdir -p summary; 
+mkdir -p summary/npeaks_vs_fc_npk;
+mkdir -p summary/npk;
+cp -r {infiles} -t .
+'''.format(
+    infiles=' '.join(npkFS))
+    os.system(cmd)
+    
 #     f = functools.partial(process,gPar = gPar)
-    f = lambda x: process(npkFile = x,gPar = gPar,dbg = dbg)
+    f = lambda x: process(npkFile = x,gPar = gPar,dbg = dbg,
+                         ANNOTATION_FILE=ref)
     condRes = res = map(f, npkFS)
     if dbg:
         with open('condRes.dbg','w') as f:
@@ -877,27 +894,36 @@ import pandas as pd
 import synotil.util as sutil
 import synotil.countMatrix as scount
 import StringIO
+
+
+
+#############################################################################################
+
+DEPENDENT_FILES_PATH        = '/media/pw_synology3/Software/chip-summary/'  # [path of chip-summary.py]
+DEFAULT_TARGET_RANGE        = '3000' # [change]  a string, not a number
+SUMMARY_FILE_NAME           = 'summary.html'
+SUMMARY_DIR                 = 'summary'
+PEAK_CALL_PIPELINE_TEMPLATE = os.path.join(DEPENDENT_FILES_PATH, 'depend/script/pipeline724-t.sh')
+PEAK_SELECT_SCRIPT          = ('/media/pw_synology3/Software/chip-summary/depend/script/select_peaks.py')
+GENELOCUS_TO_GENENAME_SCRIPT=('/media/pw_synology3/Software/chip-summary/depend/script/genelocus2genename.py')
+
+#### Slowest part to be refactored???
+EXTRACT_AGI_CODE_AND_FC     = ('/media/pw_synology3/Software/chip-summary/depend/script/extract_AGI_code_and_fold_change.py')
+GO_ENRICHMENT_SCRIPT        = os.path.join(DEPENDENT_FILES_PATH, 'depend/script/fe.sh')  # install goatools (GO enrichment) and edit fe.sh
+GO_ENRICHMENT_DIFF_SCRIPT   = os.path.join(DEPENDENT_FILES_PATH, 'depend/script/goterm-matrix.py')
+AGI_TO_GENE_NAMES           = ('/media/pw_synology3/Software/chip-summary/depend/data/AGI-to-gene-names.txt')
+ANNOTATION_FILE             = os.path.join(DEPENDENT_FILES_PATH, 'depend/data/genesTAIR10.bed') # for bedmap
+GENE_DESCRIPTION            = ('/media/pw_synology3/Software/chip-summary/depend/data/gene_description_20140101.txt')
+MAX_FOLD_CHANGE             = 10  # for number of peaks versus fold-change plot
+
+#############################################################################################
+
+agi2genename_dict = make_AGI_to_gene_name_dict(AGI_TO_GENE_NAMES)
+
+
 if __name__=='__main__':
-    #############################################################################################
-
-    DEPENDENT_FILES_PATH        = '/media/pw_synology3/Software/chip-summary/'  # [path of chip-summary.py]
-    DEFAULT_TARGET_RANGE        = '3000' # [change]  a string, not a number
-    SUMMARY_FILE_NAME           = 'summary.html'
-    SUMMARY_DIR                 = 'summary'
-    PEAK_CALL_PIPELINE_TEMPLATE = os.path.join(DEPENDENT_FILES_PATH, 'depend/script/pipeline724-t.sh')
-    PEAK_SELECT_SCRIPT          = ('/media/pw_synology3/Software/chip-summary/depend/script/select_peaks.py')
-    GENELOCUS_TO_GENENAME_SCRIPT=('/media/pw_synology3/Software/chip-summary/depend/script/genelocus2genename.py')
     
-    #### Slowest part to be refactored???
-    EXTRACT_AGI_CODE_AND_FC     = ('/media/pw_synology3/Software/chip-summary/depend/script/extract_AGI_code_and_fold_change.py')
-    GO_ENRICHMENT_SCRIPT        = os.path.join(DEPENDENT_FILES_PATH, 'depend/script/fe.sh')  # install goatools (GO enrichment) and edit fe.sh
-    GO_ENRICHMENT_DIFF_SCRIPT   = os.path.join(DEPENDENT_FILES_PATH, 'depend/script/goterm-matrix.py')
-    AGI_TO_GENE_NAMES           = ('/media/pw_synology3/Software/chip-summary/depend/data/AGI-to-gene-names.txt')
-    ANNOTATION_FILE             = os.path.join(DEPENDENT_FILES_PATH, 'depend/data/genesTAIR10.bed') # for bedmap
-    GENE_DESCRIPTION            = ('/media/pw_synology3/Software/chip-summary/depend/data/gene_description_20140101.txt')
-    MAX_FOLD_CHANGE             = 10  # for number of peaks versus fold-change plot
-
-    #############################################################################################
+    assert pyutil.os.environ.get('GSIZE') is not None
     
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', action='store_true')
@@ -919,7 +945,7 @@ if __name__=='__main__':
                         default= 0.01 ,
                         help='')
     args =  parser.parse_args()
-    ANNOTATION_FILE   = os.path.abspath(args.ref)
+    ANNOTATION_FILE  = args.ref = os.path.abspath(args.ref)
     infiles = map(os.path.abspath, args.infiles)
 
     VAR = 'GSIZE'
@@ -927,21 +953,12 @@ if __name__=='__main__':
     
     dbg = int(args.v)*10
 
-    os.system('mkdir -p %s'%args.output_dir)
-    os.chdir(args.output_dir)
-    cmd= '''
-mkdir -p summary; 
-mkdir -p summary/npeaks_vs_fc_npk;
-mkdir -p summary/npk;
-cp -r {infiles} -t .
-'''.format(
-    infiles=' '.join(infiles))
-    os.system(cmd)
 
-    agi2genename_dict = make_AGI_to_gene_name_dict(AGI_TO_GENE_NAMES)
-    
+        
     peakSummary(infiles,
                 dbg=dbg,
+                DIR=args.output_dir,
+#                 ref = ANNOTATION_FILE,
                 **args.__dict__)
     
     SUMMARY_DIR = SUMMARY_DIR.rstrip('/')

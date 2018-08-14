@@ -91,10 +91,12 @@ main()
         cd $TEMPDIR
         ls -lh .
         read OLDDIR < OLDDIR
+	mkdir -p raw/
+	mv *_raw.fastq -t raw
         if [ $PAIR -eq 1 ]; then
-            FILE="*_R1_raw.fastq *_R2_raw.fastq"
+            FILE="raw/*_R1_raw.fastq raw/*_R2_raw.fastq"
         else
-            FILE="*_R1_raw.fastq"
+            FILE="raw/*_R1_raw.fastq"
         fi
         echo [FILE] $FILE
         $PROG $FILE $NCORE

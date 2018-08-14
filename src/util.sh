@@ -475,22 +475,39 @@ cpLink()
     cp -l "$@" || cp "$@"
 }  
 export -f cpLink
+# runWithTimeLog()
+# {
+#     local CMD="$@"
+#     local ALI=${ALI:-testALI}
+#     local PROG=${PROG:-testPROG}
+#     local T0 T1 Tdiff
+#     local SELF=${SELF:-testScript.sh}
+    
+# #     echo $CMD
+#     [[ $DRY -eq 1 ]] || {
+#         T0=`datefloat`
+#         $CMD 2>&1 | tee ${ALI}.${PROG}.log 
+#         T1=`datefloat`
+#         Tdiff=`echo $T1 - $T0 | bc`
+#         echo $SELF,$Tdiff,\"$CMD\"
+#     }
+# }
+
+# export -f runWithTimeLog
+
+
 runWithTimeLog()
 {
+    # REF: https://unix.stackexchange.com/questions/70653/increase-e-precision-with-usr-bin-time-shell-command
+    local TIMEFORMAT='%3R'
     local CMD="$@"
     local ALI=${ALI:-testALI}
     local PROG=${PROG:-testPROG}
-    local T0 T1 Tdiff
     local SELF=${SELF:-testScript.sh}
-    
-#     echo $CMD
-    [[ $DRY -eq 1 ]] || {
-        T0=`datefloat`
-        $CMD 2>&1 | tee ${ALI}.${PROG}.log 
-        T1=`datefloat`
-        Tdiff=`echo $T1 - $T0 | bc`
-        echo $SELF,$Tdiff,\"$CMD\"
-    }
+    DT=`time (
+        eval "$CMD" 2>&1 | tee ${ALI}.${PROG}.log 
+    ) 2>&1`
+    echo [TIME],$SELF,$DT,\"$CMD\" | tee -a ${ALI}.time
 }
 export -f runWithTimeLog
     
@@ -571,4 +588,17 @@ prompt_yn ()
     done
 }
 export -f prompt_yn
+
+
+fastq_small () 
+{ 
+    local IN=$1;
+    local ALI=`basename ${IN%.*}`;
+    local NUM=${2:-0.1};
+    local OUT=NUM\=${NUM//\./dot}_${ALI}.fastq;
+    local CMD="seqtk sample -s100 $IN  $NUM > $OUT";
+    echo $CMD;
+    [[ $DRY -eq 1 ]] || eval $CMD
+}
+export -f fastq_small
 

@@ -3,6 +3,7 @@ main(){
     local SELF
     SELF=`readlink -f ${BASH_SOURCE[0]}`
     SELFALI=$(bname $SELF)
+    local BASE=$PWD
 
     # set -e
     ### Kind of weird here...
@@ -52,8 +53,12 @@ main(){
         
         pipeline_bowtie2_pe.sh $READs $IDX_BOWTIE2 $NCORE
         assert "$? -eq 0" $LINENO "BOWTIE2 failed"
-
-
+        
+        mkdir -p removeMultiMap;  
+        mv ${ALI}.sam removeMultiMap; 
+        cd removeMultiMap; removeMultiMap.sh ${ALI}.sam
+        ln ${ALI}.filtered.sam $BASE/${ALI}.sam ; cd $BASE
+        
         pipeline_samtools.sh ${ALI}.sam $NCORE
         assert "$? -eq 0" $LINENO "SAM2BAM/SORT failed"
 

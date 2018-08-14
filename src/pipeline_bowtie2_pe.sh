@@ -29,11 +29,15 @@ main(){
     ALI=${ALI1%_R1_*}
     echo Using $NCORE threads; echo $ALI; echo Phred quality version: $PHRED
 
-    OPT="--threads $NCORE --no-mixed --no-discordant --no-unal"
+    OPT="--threads $NCORE --no-mixed --no-discordant --no-unal -k2"
     CMD="$PROG -x $GIDX -1 $read1 -2 $read2 -S ${ALI}.sam $OPT" 
-
+    
     echo $CMD
-    time `$CMD &> ${ALI}.$PROG.log`
+    [[ $DRY -eq 1 ]] || runWithTimeLog "$CMD"
+
+#     time `eval $CMD &> ${ALI}.$PROG.log`
+    
+    
 
     #ln -f $PWD/${ali}.sam ../${ali}.sam
     #cd ..

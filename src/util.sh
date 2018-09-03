@@ -602,3 +602,15 @@ fastq_small ()
 }
 export -f fastq_small
 
+
+autoinstallPython () 
+{ 
+    local BASE=`readlink -f $1`;
+    stat $BASE && { 
+        while sleep 1; do
+            find $BASE -name "*.py" | entr -d bash -c "cd $BASE && python ./setup.py install --user";
+        done
+    }
+}
+export -f autoinstallPython
+

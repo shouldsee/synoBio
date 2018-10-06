@@ -614,3 +614,21 @@ autoinstallPython ()
 }
 export -f autoinstallPython
 
+
+clean_nonASCII () 
+{ 
+    local FNAME=$1;
+    local OFILE=`basename ${FNAME}`;
+    perl -pe 's/[^[:ascii:]]//g' < $FNAME > $OFILE
+}
+export -f clean_nonASCII
+
+
+clean_nonSample () 
+{ 
+    local INDIR=$1;
+	echo "[CLEAN] non-sample directories in: $INDIR"
+    find ${INDIR}/* -maxdepth 0 -not -regex ".*/S[0-9]+" | xargs rm -r
+}
+export -f clean_nonSample
+

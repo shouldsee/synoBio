@@ -403,7 +403,10 @@ quickFasta()
     local FI=${2:-$FA_GENOME}
     checkVars IN FI
     local OUT=`basename ${IN%.*}`.fa
-    bedtools getfasta -name+ -s -fi $FI -bed $IN -fo $OUT 
+
+    local CMD="bedtools getfasta -name+ -s -fi $FI -bed $IN -fo $OUT "
+	echo $CMD
+	[[ $DRY -eq 1 ]] || eval "$CMD"
 }
 export -f quickFasta
 
@@ -475,27 +478,6 @@ cpLink()
     cp -l "$@" || cp "$@"
 }  
 export -f cpLink
-# runWithTimeLog()
-# {
-#     local CMD="$@"
-#     local ALI=${ALI:-testALI}
-#     local PROG=${PROG:-testPROG}
-#     local T0 T1 Tdiff
-#     local SELF=${SELF:-testScript.sh}
-    
-# #     echo $CMD
-#     [[ $DRY -eq 1 ]] || {
-#         T0=`datefloat`
-#         $CMD 2>&1 | tee ${ALI}.${PROG}.log 
-#         T1=`datefloat`
-#         Tdiff=`echo $T1 - $T0 | bc`
-#         echo $SELF,$Tdiff,\"$CMD\"
-#     }
-# }
-
-# export -f runWithTimeLog
-
-
 runWithTimeLog()
 {
     # REF: https://unix.stackexchange.com/questions/70653/increase-e-precision-with-usr-bin-time-shell-command
@@ -503,11 +485,17 @@ runWithTimeLog()
     local CMD="$@"
     local ALI=${ALI:-testALI}
     local PROG=${PROG:-testPROG}
+    local T0 T1 Tdiff
     local SELF=${SELF:-testScript.sh}
-    DT=`time (
-        eval "$CMD" 2>&1 | tee ${ALI}.${PROG}.log 
-    ) 2>&1`
-    echo [TIME],$SELF,$DT,\"$CMD\" | tee -a ${ALI}.time
+    
+#     echo $CMD
+    [[ $DRY -eq 1 ]] || {
+        T0=`datefloat`
+        $CMD 2>&1 | tee ${ALI}.${PROG}.log 
+        T1=`datefloat`
+        Tdiff=`echo $T1 - $T0 | bc`
+        echo $SELF,$Tdiff,\"$CMD\"
+    }
 }
 export -f runWithTimeLog
     
@@ -632,3 +620,35 @@ clean_nonSample ()
 }
 export -f clean_nonSample
 
+
+
+routine_fasta2bed(){
+local IN=$1
+local ALI=${IN%.*}
+routine_indexGenome $IN
+local OFILE=`basename ${ALI}.located.bed`
+awk -F$'\t' 'BEGIN {OFS = FS} {print $1,"0",$2}' ${ALI}.sizes > $OFILE
+echo $OFILE
+}
+export -f routine_fasta2bed
+
+routine_fastaAddLoc(){
+local IN=$1
+local ALI=`basename ${IN%.*}`
+local OFILE=`routine_fasta2bed $IN`
+quickFasta $OFILE $IN
+echo ${OFILE%.bed}.fa
+}
+export -f routine_fastaAddLoc
+
+uploadRun () 
+{ 
+    RunID=$1;
+    TARG=${2:-$PWD};
+    mkdir -p $TARG/{bw,npk,bed};
+    cp -n --parent `find $RunID -name "*RPGC.bw" -or -name "*_genomenorm.bw"` -t $TARG/bw;
+    cp --parent `find $RunID -name "*.narrowPeak"` -t $TARG/npk;
+    cp --parent `find $RunID -name "*.bed"` -t $TARG/bed;
+    cd $OLDPWD
+}
+export -f uploadRun

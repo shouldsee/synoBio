@@ -35,7 +35,7 @@ assert ()                 #  If condition false,
 export -f assert
 # assert "0 -eq 1" $LINENO "hi"
 
-headqc ()
+headqc()
 {
   FNAME=$1
   HEADLEN=${2:-100k}
@@ -46,7 +46,7 @@ headqc ()
 }
 export -f headqc
 
-routine_fastqc ()
+routine_fastqc()
 {
   INDIR=${1:-$PWD}
   OUTDIR="$PWD/fastqc"
@@ -106,21 +106,34 @@ bamqc() {
   for pid in ${pids[*]}; do
     wait $pid
   done  
+  
+  #### blacklist un-aligned scaffolds
+  samtools idxstats $BAM \
+  | awk -F$'\t' 'BEGIN {OFS = FS} $3!="0" {print $1,"0",$2}' \
+  > ${ALI}_blacklist.bed
 }
 export -f bamqc
 
 bam2bigwig() {
     local BAM=$1
-    local GSIZE=$2
-    local NORM=${3:-RPGC}
-    ALI=$(bname $BAM)
+    local NORM=${2:-RPKM}
+    local GLEN=${3:-$GLEN}
+    local ARGS=${4:-}
+#     local NORM=${4:-RPKM}
+#     ALI=$(bname $BAM)
+    local ALI=${BAM%.bam}
+    
+    local CMD="bamCoverage $ARGS --normalizeUsing $NORM \
+      --smoothLength 10 --binSize 10 -p ${NCORE:-1}  \
+      -b $BAM -o ${ALI}_${NORM}.bw"
+#     CMD="$CMD --skipNAs"
+    [[ -z "$GLEN" ]] || CMD="$CMD --effectiveGenomeSize $GLEN" 
+    echo $CMD 
+    [[ $DRY -eq 1 ]] || eval $CMD
     
     #### -split argument is essential !!!
-    genomeCoverageBed -ibam $BAM -bg -split > $ALI.bdg 
-    bedGraphToBigWig $ALI.bdg $GSIZE $ALI.bw 
-    bamCoverage --normalizeUsing $NORM --effectiveGenomeSize `size2sum $GSIZE` \
-      --smoothLength 10 --binSize 10 -p ${NCORE:-1} \
-      -b $BAM -o ${ALI}_${NORM}.bw
+#     genomeCoverageBed -ibam $BAM -bg -split > $ALI.bdg 
+#     bedGraphToBigWig $ALI.bdg $GSIZE $ALI.bw 
 }
 export -f bam2bigwig
 
@@ -290,7 +303,7 @@ flatten_keepname(){
 }
 export -f flatten_keepname
 
-routine_indexGenome ()
+routine_indexGenome()
 {
 #     F=$(echo *.fa);
     IN=${1}
@@ -298,7 +311,7 @@ routine_indexGenome ()
 }
 export -f routine_indexGenome
 
-checkVars ()
+checkVars()
 {
     for F in "$@";
     do
@@ -308,17 +321,28 @@ checkVars ()
         if [[ -z "$FILE" ]]; then echo $F variable not set; exit 255 ; fi
         echo [Test] $F=$FILE;
 #         [[ -f "$FILE" ]] || [[ -d "$FILE" ]] || ls -l ${FILE}* || { echo "$F=$FILE does not exists!" ;  exit 255 ; }
-        if [[ -f "$FILE" ]]; then : 
+        if [[ -f "$FILE" ]]; then 
+            : 
         else
             if [[ -d "$FILE" ]]; then
                 :
             else 
-                ls -l ${FILE}* || { echo "$F=$FILE does not exists!" ;  exit 255 ; }
+                ### try
+                ls -l ${FILE}* &>/dev/null
+                
+                if [ $? -eq 0 ];then 
+                    ls -l ${FILE}* | head -1
+                    :
+                else
+                    echo "[INSPECT]$F=$FILE must NOT be a directory";
+#                     echo "$F=$FILE does not exists!" ;  exit 255 ; 
+                fi
             fi 
         fi
     done
 }
 export -f checkVars
+
 
 tabCut(){
     cut -f"$2" -d$'\t' $1
@@ -367,12 +391,13 @@ export -f GTF2CDSR
 # cat tmp | bedtools groupby -g 1,4,5,6 -c 2,3,8 -o min,max,first >tmp.cds
 # head *.cds
 # gtf2CDSR
-autoinstallPython () 
-{ 
-    local BASE=$1;
-    cd $BASE && ls -1 */*.py | entr ./setup.py install --user
-}
-export -f autoinstallPython
+# autoinstallPython () 
+# { 
+#     local BASE=$1;
+#     local ARGS=
+#     cd $BASE && ls -1 */*.py | entr ./setup.py install --user
+# }
+# export -f autoinstallPython
 
 
 sortAll()
@@ -594,9 +619,10 @@ export -f fastq_small
 autoinstallPython () 
 { 
     local BASE=`readlink -f $1`;
+    local ARG="${@:2}";
     stat $BASE && { 
         while sleep 1; do
-            find $BASE -name "*.py" | entr -d bash -c "cd $BASE && python ./setup.py install --user";
+            find $BASE -name "*.py" | entr -d bash -c "cd $BASE && python ./setup.py install ${ARG[@]}";
         done
     }
 }
@@ -632,6 +658,14 @@ echo $OFILE
 }
 export -f routine_fasta2bed
 
+routine_size2bed(){
+    local SIZE=$1
+    local OFILE=`basename ${SIZE}`.bed
+    awk -F$'\t' 'BEGIN {OFS = FS} {print $1,"0",$2}' $SIZE > $OFILE
+    echo $OFILE
+}
+export -f routine_size2bed
+
 routine_fastaAddLoc(){
 local IN=$1
 local ALI=`basename ${IN%.*}`
@@ -646,9 +680,40 @@ uploadRun ()
     RunID=$1;
     TARG=${2:-$PWD};
     mkdir -p $TARG/{bw,npk,bed};
-    cp -n --parent `find $RunID -name "*RPGC.bw" -or -name "*_genomenorm.bw"` -t $TARG/bw;
+    cp -n --parent `find $RunID \
+        -name "*_RPKM.bw" \
+        -or -name "*_RPGC.bw" \
+        -or -name "*_genomenorm.bw" \
+        ` -t $TARG/bw;
     cp --parent `find $RunID -name "*.narrowPeak"` -t $TARG/npk;
     cp --parent `find $RunID -name "*.bed"` -t $TARG/bed;
-    cd $OLDPWD
+#     cd $OLDPWD
 }
 export -f uploadRun
+safe_quote () 
+{ 
+    local x="$@";
+    echo $(printf '%q' "$x")
+}
+export -f safe_quote
+
+
+routine_bdg2bw()
+{
+local IN=$1
+local GSIZE=${2:-$GSIZE}
+local ALI=`basename ${IN%.*}`
+bedGraphToBigWig $IN $GSIZE $ALI.bw
+}
+export -f routine_bdg2bw
+
+
+clean_nonASCII_Filename () 
+{ 
+    local FNAME=$1;
+    local CMD=`echo mv "$FNAME" "${FNAME//[^/A-Za-z0-9._-]/_}"`;
+    echo $CMD
+    [[ $DRY -eq 1 ]] || eval "$CMD"
+}
+export -f clean_nonASCII_Filename
+

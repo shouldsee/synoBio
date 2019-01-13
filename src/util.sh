@@ -311,37 +311,37 @@ routine_indexGenome()
 }
 export -f routine_indexGenome
 
-checkVars()
-{
-    for F in "$@";
-    do
-        FILE=${!F};
-#         echo [FILE]=$FILE
-#         [[ ! -z "$FILE" ]] || { echo $F variable not set ; exit 255 ; } 
-        if [[ -z "$FILE" ]]; then echo $F variable not set; exit 255 ; fi
-        echo [Test] $F=$FILE;
-#         [[ -f "$FILE" ]] || [[ -d "$FILE" ]] || ls -l ${FILE}* || { echo "$F=$FILE does not exists!" ;  exit 255 ; }
-        if [[ -f "$FILE" ]]; then 
-            : 
-        else
-            if [[ -d "$FILE" ]]; then
-                :
-            else 
-                ### try
-                ls -l ${FILE}* &>/dev/null
+# checkVars()
+# {
+#     for F in "$@";
+#     do
+#         FILE=${!F};
+# #         echo [FILE]=$FILE
+# #         [[ ! -z "$FILE" ]] || { echo $F variable not set ; exit 255 ; } 
+#         if [[ -z "$FILE" ]]; then echo $F variable not set; exit 255 ; fi
+#         echo [Test] $F=$FILE;
+# #         [[ -f "$FILE" ]] || [[ -d "$FILE" ]] || ls -l ${FILE}* || { echo "$F=$FILE does not exists!" ;  exit 255 ; }
+#         if [[ -f "$FILE" ]]; then 
+#             : 
+#         else
+#             if [[ -d "$FILE" ]]; then
+#                 :
+#             else 
+#                 ### try
+#                 ls -l ${FILE}* &>/dev/null
                 
-                if [ $? -eq 0 ];then 
-                    ls -l ${FILE}* | head -1
-                    :
-                else
-                    echo "[INSPECT]$F=$FILE must NOT be a directory";
-#                     echo "$F=$FILE does not exists!" ;  exit 255 ; 
-                fi
-            fi 
-        fi
-    done
-}
-export -f checkVars
+#                 if [ $? -eq 0 ];then 
+#                     ls -l ${FILE}* | head -1
+#                     :
+#                 else
+#                     echo "[INSPECT]$F=$FILE must NOT be a directory";
+# #                     echo "$F=$FILE does not exists!" ;  exit 255 ; 
+#                 fi
+#             fi 
+#         fi
+#     done
+# }
+# export -f checkVars
 
 
 tabCut(){
@@ -379,7 +379,7 @@ export -f bamHist
 GTF2CDSR(){
     IN=$1
     OFILE=${2:-$(basename $IN).cds}
-    gtf2bed< $IN  | sed "s/\"//g" | grep CDS >tmp
+    gtf2bed< $IN  | sed "s/\"//g" | grep $'CDS\t' >tmp
     cat tmp | sort -k1,1 -k4,4 -k5,5 -k6,6  | bedtools groupby -g 1,4,5,6 -c 2,3,8 -o min,max,first \
     | awk -v OFS='\t' '{print $1, $5, $6, $2, $3, $4, $7, $8}' \
     > $OFILE
@@ -716,4 +716,31 @@ clean_nonASCII_Filename ()
     [[ $DRY -eq 1 ]] || eval "$CMD"
 }
 export -f clean_nonASCII_Filename
+
+
+makeSIZE () 
+{ 
+    du -csh ./* | sort -h | tee ./SIZE
+}
+export -f makeSIZE
+
+
+gtf2bed12 () 
+{ 
+    local IN=$1;
+    local ALI=`basename ${IN%.*}`;
+    local OUT=${ALI}.bed12;
+    local OUT=${2:-${ALI}.bed12};
+    gtfToGenePred $IN $ALI.genePred;
+    genePredToBed $ALI.genePred $OUT
+}
+export -f gtf2bed12
+
+
+routine_completeGFF () 
+{ 
+    local GTF=${1:-$GTF};
+    gffread -E $GTF -o $GTF.gff
+}
+export -f routine_completeGFF
 

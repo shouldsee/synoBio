@@ -18,7 +18,9 @@ main()
     read2=`readlink -f $2`
     NCORE=${3:-4}
 
+
     read ALI1 ALI2 PHRED <<< $(check_PE $read1 $read2)
+    if [ "$PHRED"="solexa64" ]; then PHRED=phred64; fi
     echo $ALI1
     echo $ALI2
     echo Using $NCORE threads

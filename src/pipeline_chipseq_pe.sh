@@ -8,16 +8,24 @@ main(){
     # set -e
     ### Kind of weird here...
     source $(dirname $SELF)/activate
+    
+    local read1 read2 reads PAIRED NCORE
+    NCORE=6
+    PAIR=0
+    source bb__argparse.sh "$@"
+    shift "$((OPTIND-1))"    
 
     echo ==== Parse Input arguments
     {
-        read1=`echo $1` ####  e.g. test_R1_.fastq
-        read2=`echo $2` ####  e.g. test_R2_.fastq
-        NCORE=${3:-6} #### number of threads, default to 6
+#         read1=`echo $1` ####  e.g. test_R1_.fastq
+#         read2=`echo $2` ####  e.g. test_R2_.fastq
+#         NCORE=${3:-6} #### number of threads, default to 6
         DIR=$PWD
         ALI1=$(bname $read1)
     #     ALI2=$(bname $read2)
         ALI=${ALI1%_R1_*}
+        local fqALI=${ALI1%_R1_*}
+        
         LOGFILE=${ALI}.${SELFALI}.log
         echo []Proposed alias ${ALI} ==
         echo []Logfile $LOGFILE
@@ -27,7 +35,7 @@ main(){
     echo "===== IMPORTANT VARS ====="
     checkVars read1 read2 SELF LOGFILE 
     echo "===== Genome Vars ====="
-    checkVars GSIZE FA_ADAPTER_PE REF IDX_BOWTIE2 
+    checkVars GSIZE FA_ADAPTER_PE REF IDX_BOWTIE2 GNAME
     #checkVars GTF  GFF 
     } | tee -a $LOGFILE
     
@@ -51,16 +59,34 @@ main(){
         pipeline_trim_pe.sh $READs $NCORE 
         assert "$? -eq 0" $LINENO "Trimmomatic/fastqc failed"
         
-        pipeline_bowtie2_pe.sh $READs $IDX_BOWTIE2 $NCORE
+        local ALI=${fqALI}_${GNAME}
+        pipeline_bowtie2_pe.sh $READs $IDX_BOWTIE2 $ALI $NCORE
         assert "$? -eq 0" $LINENO "BOWTIE2 failed"
         
-        mkdir -p removeMultiMap;  
-        mv ${ALI}.sam removeMultiMap; 
-        cd removeMultiMap; removeMultiMap.sh ${ALI}.sam
-        ln ${ALI}.filtered.sam $BASE/${ALI}.sam ; cd $BASE
+#         {
         
-        pipeline_samtools.sh ${ALI}.sam $NCORE
-        assert "$? -eq 0" $LINENO "SAM2BAM/SORT failed"
+#         mkdir -p removeMultiMap;  
+#         mv ${ALI}.sam removeMultiMap; 
+#         cd removeMultiMap; removeMultiMap_pe.sh ${ALI}.sam | deOrphan.py >${ALI}.filtered.sam
+#         ln ${ALI}.filtered.sam $BASE/${ALI}.sam ; cd $BASE
+#         pipeline_samtools.sh ${ALI}.sam $NCORE
+#         assert "$? -eq 0" $LINENO "SAM2BAM/SORT failed"
+#         }
+        
+        {
+            mkdir -p removeMultiMap;  
+            mv ${ALI}.sam removeMultiMap/${ALI}.orig.sam; 
+            cd removeMultiMap; removeMultiMap_pe.sh ${ALI}.orig.sam | deOrphan.py >${ALI}.sam
+
+            pipeline_samtools.sh ${ALI}.orig.sam $NCORE
+            assert "$? -eq 0" $LINENO "SAM2BAM/SORT failed"
+
+            pipeline_samtools.sh ${ALI}.sam $NCORE
+            assert "$? -eq 0" $LINENO "SAM2BAM/SORT failed"
+
+            ln ${ALI}{.orig,}.sorted.bam -t $BASE ; cd $BASE
+        }
+        
 
         pipeline_picard.sh ${ALI}.sorted.bam $NCORE
         assert "$? -eq 0" $LINENO "Picard Deduplication failed"
@@ -68,19 +94,7 @@ main(){
         pipeline_bamqc.sh ${ALI}.bam $GSIZE $NCORE
         assert "$? -eq 0" $LINENO "BAMQC/conversion failed"
 
-        cleanup() {
-            set -e
-            ALI=$1
-            ln -f *.log *.time output/
-    #         ln -f *.count *.gtf output/
-            ln -f *.bw *.bdg output/
-            ln -f $ALI.bam $ALI.bai output/
-            ln -f fastqc/*.html output/
-        }
-
-        mkdir -p output
-        touch output/DESCRIPTION
-        cleanup ${ALI} &>${ALI}.cleanup.log
+        pipeline_cleanup.sh ${ALI} &>${ALI}.cleanup.log
         assert "$? -eq 0" $LINENO "Output/cleanup failed"
 
         DUR=$(echo $(datefloat) - $T00 | bc)

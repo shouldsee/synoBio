@@ -3,6 +3,7 @@ main(){
     local SELF
     SELF=`readlink -f ${BASH_SOURCE[0]}`
     SELFALI=$(bname $SELF)
+    
 
     set -e ###exit on error
 
@@ -19,17 +20,20 @@ main(){
     read1=$1
     # read2=$2
     GIDX=$2
-    NCORE=${3:-4}
+    local ALI=${3:-test}
+    local NCORE=${4:-4}
+#     local ALI=$ALI ####get global alias $ALI
+    
 
     ##### Checking input format
     echo $read1
     read ALI1 ALI1 PHRED <<< $(check_PE $read1 $read1)
     #### Shared alias
-    ALI=${ALI1%_R1_*}
+#     ALI=${ALI1%_R1_*}
     echo Using $NCORE threads; echo $ALI; echo Phred quality version: $PHRED
 
 
-    OPT="--threads $NCORE --no-mixed --no-discordant --no-unal"
+    OPT="--threads $NCORE --no-mixed --no-discordant --no-unal -k2"
     CMD="$PROG -x $GIDX -U $read1 -S ${ALI}.sam $OPT" 
 
     echo $CMD

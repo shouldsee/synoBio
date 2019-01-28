@@ -1,4 +1,5 @@
 #!/bin/bash
+#[DEPRECATED]
 # %%bash
 main(){
     set -e

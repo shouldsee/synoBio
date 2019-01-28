@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
 main(){
 
-    local SELF
-    SELF=`readlink -f ${BASH_SOURCE[0]}`
-    SELFALI=$(bname $SELF)
+    local SELF=`readlink -f ${BASH_SOURCE[0]}`
+    local SELFALI=$(bname $SELF)
 
     set -e ###exit on error
 
@@ -16,35 +15,30 @@ main(){
     MSG="spliced alignment with HISAT2"
     echo "===== Starting $MSG ====="
     # echo "===== Ending $MSG  ====="
+    
+    #### kwargs
+    local ALI=test
+    local read1=""
+    local read2=""
+    local reads=""
+    local NCORE
+    source bb__argparse.sh "$@"
+    shift "$((OPTIND-1))"
+    
+    #### positional
+    local GIDX=$1
 
-    read1=$1
-    read2=$2
-    GIDX=$3
-    NCORE=${4:-4}
-
-    ##### Checking input format
-    echo $read1
-    read ali1 ali2 PHRED <<< $(check_PE $read1 $read2)
-    echo $ali1
-    echo $ali2
     echo Using $NCORE threads
 
-    ####!! overiding
-    #PHRED=phred33
-    echo Phred quality version: $PHRED
-
-    #### Shared alias
-    ali=${ali1%_R1_*}
-    echo $ali
-    ALI=$(echo $ali)
-
-
-
     OPT="--threads $NCORE --no-mixed --rna-strandness RF --dta --fr"
-    CMD="$PROG -x $GIDX -1 $read1 -2 $read2 -S ${ali}.sam $OPT" 
+    if [[ -n "$read2" ]]; then
+        local CMD="$PROG -x $GIDX -S ${ALI}.sam $OPT -1 $read1 -2 $read2" 
+    else
+        local CMD="$PROG -x $GIDX -S ${ALI}.sam $OPT -U $read1"
+    fi
 
     echo $CMD
-    time `$CMD &> ${ali}.$PROG.log`
+    time `$CMD &> ${ALI}.$PROG.log`
 
     #ln -f $PWD/${ali}.sam ../${ali}.sam
     #cd ..

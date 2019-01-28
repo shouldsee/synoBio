@@ -16,17 +16,19 @@ main(){
     echo "===== Starting $MSG ====="
     # echo "===== Ending $MSG  ====="
 
+
     read1=$1
     read2=$2
     GIDX=$3
-    NCORE=${4:-4}
+    local ALI=${4:-test}
+    local NCORE=${5:-4}
 
     ##### Checking input format
-    echo $read1
-    read ALI1 ALI2 PHRED <<< $(check_PE $read1 $read2)
+#     echo $read1
+#     read ALI1 ALI2 PHRED <<< $(check_PE $read1 $read2)
     
     #### Shared alias
-    ALI=${ALI1%_R1_*}
+#     ALI=${ALI1%_R1_*}
     echo Using $NCORE threads; echo $ALI; echo Phred quality version: $PHRED
 
     OPT="--threads $NCORE --no-mixed --no-discordant --no-unal -k2"

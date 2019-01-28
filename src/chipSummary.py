@@ -695,7 +695,7 @@ bedtools closest -d -a {SNPK} -b {ANNOBASE}.{RANGE} | tee {FOUT}.tmp
     df = df[df['distance']==0]
     
 #         raise e
-    df = df.sort_values('FC',ascending = False,inplace = 0)
+    df =df.sort_values('FC',ascending = False,inplace = False)
     
     #### deduplication on gene acc
     df = df.loc[~df.duplicated('hit')]
@@ -815,8 +815,10 @@ cp -r {infiles} -t .
     f.write('<h2>%s</h2>' % (TITLE))
 
     #####################################################################
-    f.write('<h3>Target genes and associated GO terms</h3>')
-
+    f.write('<h3>Target genes and (Not implemented "associated GO terms")</h3>')
+    f.write('<p><a href=\"{0}\">[{0}]</a></p>' .format (
+        'FoldChange_table.csv'
+    ))
     table_string = '<table><tr><td>Sample</td><td>Target gene list</td><td>#target genes</td><td>GO enrichment</td><td>Peak selection thresholds</td><td>#peaks plot</td></tr>'
     rowFmt = '''
         <tr><td>{key}</td>
@@ -834,33 +836,32 @@ cp -r {infiles} -t .
     table_string += '</table>'
     f.write(table_string)
 
-    #####################################################################
-    f.write('<h3>Enriched GO terms associated to target genes in different conditions</h3>')
-    f.write('<p>Most shared GO terms across conditions are on the top in the following table.</p>')
-    filename = make_goenrichment_diff([d['goenrich_filename'] for d in res],
-                                      SUMMARY_DIR)
-    f.write('<a href=\"%s\">Each row is a GO term. Each column is a condition.</a>' % (filename))
+#     #####################################################################
+#     f.write('<h3>Enriched GO terms associated to target genes in different conditions</h3>')
+#     f.write('<p>Most shared GO terms across conditions are on the top in the following table.</p>')
+#     filename = make_goenrichment_diff([d['goenrich_filename'] for d in res],
+#                                       SUMMARY_DIR)
+#     f.write('<a href=\"%s\">Each row is a GO term. Each column is a condition.</a>' % (filename))
 
 
-    #####################################################################
-#     if gPar['PAIRWISE_COMPARE'].lower().startswith('y'): 
-#         f.write('<h3>Pairwise comparison between conditions</h3>')
-#         f.write('<p>Each cell in the following table contains three numbers, X, Y and Z. X is the number of target genes that are in condition A but not in condition B. Z is the number of target genes that are in condition B but not in condition A.  Y is the number of target genes that are in both conditions.</p>')
-#         make_comparison_table(f, gene_lists, agi2genename_dict, SUMMARY_DIR)
+#     #####################################################################
+# #     if gPar['PAIRWISE_COMPARE'].lower().startswith('y'): 
+# #         f.write('<h3>Pairwise comparison between conditions</h3>')
+# #         f.write('<p>Each cell in the following table contains three numbers, X, Y and Z. X is the number of target genes that are in condition A but not in condition B. Z is the number of target genes that are in condition B but not in condition A.  Y is the number of target genes that are in both conditions.</p>')
+# #         make_comparison_table(f, gene_lists, agi2genename_dict, SUMMARY_DIR)
 
 
 
-    #####################################################################
+#     #####################################################################
     
-    file_bindingMat = 'FoldChange_table.csv' #% SUMMARY_DIR
    
-    f.write('<h3>Binding to target genes in different conditions</h3>')
-    f.write('<p><b>Note:</b> In the following, \'+\' means binding near a target gene in a particular experimental condition, and \'-\' means non-binding.</p>')
-    f.write('<p>The columns are:<br/><br/>')
-    colName = ['AGI_locus_name'] + [d['key'] for d in res] + ['gene_name (if available)']
-    f.write( '<br/>'.join(colName))
-    f.write('</p>')
-    f.write('<p><a href=\"%s\">Download text version</a></p>' % (file_bindingMat))
+#     f.write('<h3>Binding to target genes in different conditions</h3>')
+#     f.write('<p><b>Note:</b> In the following, \'+\' means binding near a target gene in a particular experimental condition, and \'-\' means non-binding.</p>')
+#     f.write('<p>The columns are:<br/><br/>')
+#     colName = ['AGI_locus_name'] + [d['key'] for d in res] + ['gene_name (if available)']
+#     f.write( '<br/>'.join(colName))
+#     f.write('</p>')
+
 
     f.write('</body>')    
     f.write('</html>')    
@@ -942,7 +943,7 @@ if __name__=='__main__':
                         default= 0.01 ,
                         help='')
     parser.add_argument('--QVALUE',nargs='?',type=float,
-                        default= 0.01 ,
+                        default= 0.5 ,
                         help='')
     args =  parser.parse_args()
     ANNOTATION_FILE  = args.ref = os.path.abspath(args.ref)

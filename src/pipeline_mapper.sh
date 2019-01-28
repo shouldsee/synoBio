@@ -10,7 +10,6 @@ main()
 
     ###############
     #### ==== Parsing argument
-    OPTIND=1         # Reset in case getopts has been used previously in the shell.
 
     # Default variables:
     output_file=""
@@ -42,6 +41,7 @@ main()
         exit 0
     fi
 
+    OPTIND=1         # Reset in case getopts has been used previously in the shell.
     while getopts "h?pt:" opt; do
         case "$opt" in
         h|\?)
@@ -55,10 +55,8 @@ main()
     done
     shift $((OPTIND-1))
     [ "${1:-}" = "--" ] && shift
-    echo $PAIR
     #### ---- Parsing argument
     ###############
-    echo "leftover: $@"
 
     ID=${1}
     PROG=${2:-pipeline_rnaseq.sh}
@@ -72,15 +70,15 @@ main()
     {
         #### echo ==== Parsing arugments
         # e.g.: ID=./150R/Doro_150R_Doro_1-43239982
-        ID=${ID#./}
-        echo $ID; echo PROGRAM:$PROG;
+        ID=`readlink -f $ID`
+        echo $ID; echo [PROGRAM]:$PROG;
 
     }
 
     {
         #### echo ==== Downloading fastq files
         mkdir -p $OUTDIR
-        ARR=(`preprocessor.py $INDIR/$ID | tee -a bulk.log`)
+        ARR=(`preprocessor.py $ID | tee -a bulk.log`)
     #     echo ${ARR[@]}
         TEMPDIR=${ARR[-1]}
         echo "[TEMPDIR]=$TEMPDIR"
@@ -91,15 +89,11 @@ main()
         cd $TEMPDIR
         ls -lh .
         read OLDDIR < OLDDIR
-	mkdir -p raw/
-	mv *_raw.fastq -t raw
-        if [ $PAIR -eq 1 ]; then
-            FILE="raw/*_R1_raw.fastq raw/*_R2_raw.fastq"
-        else
-            FILE="raw/*_R1_raw.fastq"
-        fi
-        echo [FILE] $FILE
-        $PROG $FILE $NCORE
+        read FILEARG < FILEARG
+        local CMD="$PROG -t $NCORE $FILEARG"
+        echo [CMD]$CMD
+        echo [FILE] $FILEARG
+        eval "$CMD"
     }
 #     return 0
     
@@ -107,11 +101,19 @@ main()
         #### echo ==== Uploading outputs
         OUTALI=${PROG%.*}/$OLDDIR
         mkdir -p $OUTDIR/$OUTALI
-        cp output/* $OUTDIR/$OUTALI
+#         cp output/* $OUTDIR/$OUTALI
+        cpLink output/* $OUTDIR/$OUTALI
     }  
     cd ..
-
-    echo "[FINISH]: Outputed to $OUTDIR/$OLDDIR"
+    echo "[FINISH]: Outputed to $OUTDIR/$OUTALI"
+    
+    #### Cache the scripts
+    if [[ -n "$ORIGIN" ]]; then
+        mkdir -p src
+        find $ORIGIN/ -type f -not -name "*.ipynb" | xargs cp -t src
+    else
+        echo "[WARN] unable to find envVar \"ORIGIN\" and not caching the scripts"
+    fi
     return 0
 }
 main "$@"

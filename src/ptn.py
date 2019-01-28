@@ -1,6 +1,6 @@
 import re
 Rcomp=re.compile
-ridL = r'(^|/)(\d{1,4}[RC]'
+ridL = r'(^|[/_])(\d{1,4}[RC]'
 # ridL = r'(\d{1,4}[RC]'
 end = r'[_\/\-]'
 runID = Rcomp('.*%s).*'%(ridL,))

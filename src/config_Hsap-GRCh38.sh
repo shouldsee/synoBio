@@ -7,20 +7,20 @@ ADADIR="/home/Program_NGS_sl-pw-srv01/Trimmomatic-0.32/adapters"
 export FA_ADAPTER_SE="$ADADIR/TruSeq3-SE.fa"
 export FA_ADAPTER_PE="$ADADIR/TruSeq3-PE-2.fa"
 
-export GNAME="Ath-TAIR10"
-export REF=/home/feng/ref/Arabidopsis_thaliana_TAIR10
+export GNAME="Hsap-GRCh38"
+export REF=/home/feng/ref/Hsap-GRCh38
 ###### Genome annotation .gtf and .gff3 (optional)
 export GTF=$(echo $REF/annotation/*.gtf)
 export GFF=$(echo $REF/annotation/*.gff*)
 export GSIZE="$REF/genome.sizes"
 export FA_GENOME="$REF/genome.fa"
 
-A=$(ls -1 $REF/sequence/Bowtie2Index/* | head -1)
-export IDX_BOWTIE2=${A%%.*}
+A=$(ls -1 $REF/sequence/bowtie2-build/* | grep .1.bt2 | grep -v rev)
+export IDX_BOWTIE2=${A%.1.bt2}
 
 ###### HISAT2 index
-A=$(ls -1 $REF/sequence/HISAT2Index/* | head -1)
-export IDX_HISAT2=${A%%.*}
+A=$(ls -1 $REF/sequence/hisat2-build/* | grep .1.ht2 | grep -v rev)
+export IDX_HISAT2=${A%.*.ht2}
 
 export DB_MOTIF=" \
 /home/feng/ref/motif/ARABD/ArabidopsisPBM_20140210.meme\
@@ -28,7 +28,7 @@ export DB_MOTIF=" \
 #/home/feng/ref/motif/CIS-BP/Brachypodium_distachyon.meme \
 
 
-checkVars GTF GSIZE FA_ADAPTER_SE FA_ADAPTER_PE REF IDX_BOWTIE2 IDX_HISAT2 FA_GENOME GFF 
+checkVars GTF GSIZE FA_ADAPTER_SE FA_ADAPTER_PE REF IDX_BOWTIE2 IDX_HISAT2 FA_GENOME #GFF 
 export GLEN=`size2sum $GSIZE`
 
 #### Hand-coded environment variables

@@ -1,6 +1,7 @@
 #!/bin/bash
 main()
 {
+	[[ -z "$GSIZE" ]] && { echo GSIZE not set; } && return 0
     local PROG=macs2
     local SELF=${BASH_SOURCE}
     local SELF_ALI=`basename ${SELF%.*}`

@@ -18,13 +18,16 @@ main(){
     echo "===== Starting $MSG ====="
 
 
-    ALI=$(bname $INPUT)
+    #ALI=$(bname $INPUT)
+    local ALI=${INPUT%.bam}
     CMD="bamqc $INPUT &>> ${ALI}.runlog"
     echo $CMD
-    time `eval $CMD` &  pid[0]=$!
+    eval $CMD
+#     time `eval $CMD` &  pid[0]=$!
 
-    CMD="bam2bigwig $INPUT $GSIZE &>> ${ALI}.runlog"
-    time `eval $CMD` &  pid[1]=$!
+    CMD="bam2bigwig $INPUT RPKM $GLEN &>> ${ALI}.runlog"
+    eval $CMD
+#     time `eval $CMD` &  pid[1]=$!
 
     for p in ${pid[*]}
     do

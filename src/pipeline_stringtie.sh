@@ -16,10 +16,11 @@ main(){
         echo [DEFAULT] NCORE not set, default to $DFT
         NCORE=$DFT
         } #         && return 0    
+    checkVars GTF NCORE
     
     local ALI=$(bname $INPUT)
-
-    local CMD="stringtie -p $NCORE --rf ${ALI}.bam -G $GTF -o ${ALI}.stringtie.gtf -A ${ALI}.stringtie.count &> ${ALI}.stringtie.log"   
+    local OPTS="-p $NCORE --rf -e"
+    local CMD="stringtie $OPTS  ${ALI}.bam -G $GTF -o ${ALI}.stringtie.gtf -A ${ALI}.stringtie.count &> ${ALI}.stringtie.log"   
     local MSG="Transcript assembly with $PROG"
     
     echo "===== Starting $MSG ====="

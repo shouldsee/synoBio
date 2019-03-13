@@ -25,7 +25,7 @@ main()
     esac    
     
     FA=${ALI}.fa 
-    checkVars FA
+    source checkVars FA
     
 #     export DRY=1
 

@@ -11,7 +11,7 @@ main()
     GCOUNT=`size2sum $GSIZE` ### lenght of your genome
     OPT="${@:2}"
     ALI=`basename ${BAM%.*}`
-    CMD="macs2 callpeak $OPT -t $BAM --keep-dup 1 -n $ALI -g $GCOUNT -p 0.1"    
+    CMD="macs2 callpeak $OPT --keep-dup 1 -p 0.1 -t $BAM  -n $ALI -g $GCOUNT "    
     runWithTimeLog "$CMD" | tail -1 >> ${ALI}.time
 }
 main "$@"

@@ -59,6 +59,7 @@ routine_fastqc()
     headqc $F 100k &>>run.log &
     fastqc $F -o . &>>run.log &
   done
+  cd ..
 }
 export -f routine_fastqc
 
@@ -94,14 +95,32 @@ check_PE() {
 }
 export -f check_PE
 
+containsElement () {
+
+# source: https://stackoverflow.com/a/8574392/8083313
+  local e match="$1"
+  shift
+  for e; do [[ "$e" == "$match" ]] && return 0; done
+  return 1
+}
+export -f containsElement
+
 bamqc() {
   ### QC a sorted, dedup bam
+#   exit 0
+#   type bamqc
+  set -x
+  local FILEjson=${FILEjson:-FILEDefault.json}
   BAM=$1
   ALI=${BAM%.bam}
   echo $ALI
-  samtools index $BAM $ALI.bai &
+  
+  samtools sort $BAM -b -o $BAM.temp
+  ln -f $BAM.temp $BAM
+  
+  samtools index $BAM $ALI.bai 
   pids[0]=$!
-  samtools flagstat $BAM >$ALI.flagstat.log &  
+  samtools flagstat $BAM >$ALI.flagstat.log 
   pids[1]=$!
   for pid in ${pids[*]}; do
     wait $pid
@@ -111,6 +130,9 @@ bamqc() {
   samtools idxstats $BAM \
   | awk -F$'\t' 'BEGIN {OFS = FS} $3!="0" {print $1,"0",$2}' \
   > ${ALI}_blacklist.bed
+  
+#     util__fileDict.py --ofname=$FILEjson \
+#         --bamIndex=${ALI}_${NORM}.bw  
 }
 export -f bamqc
 
@@ -122,6 +144,7 @@ bam2bigwig() {
 #     local NORM=${4:-RPKM}
 #     ALI=$(bname $BAM)
     local ALI=${BAM%.bam}
+    local FILEjson=${FILEjson:-FILEDefault.json}
     
     local CMD="bamCoverage $ARGS --normalizeUsing $NORM \
       --smoothLength 10 --binSize 10 -p ${NCORE:-1}  \
@@ -129,7 +152,13 @@ bam2bigwig() {
 #     CMD="$CMD --skipNAs"
     [[ -z "$GLEN" ]] || CMD="$CMD --effectiveGenomeSize $GLEN" 
     echo $CMD 
-    [[ $DRY -eq 1 ]] || eval $CMD
+    [[ $DRY -eq 1 ]] || {
+        eval $CMD
+        
+        util__fileDict.py --ofname=$FILEjson \
+            --bwFile=${ALI}_${NORM}.bw
+    }
+    
     
     #### -split argument is essential !!!
 #     genomeCoverageBed -ibam $BAM -bg -split > $ALI.bdg 
@@ -743,4 +772,21 @@ routine_completeGFF ()
     gffread -E $GTF -o $GTF.gff
 }
 export -f routine_completeGFF
+
+file__freeze () 
+{ 
+    local IN=$1;
+    local OUT=${IN//\//__};
+    CMD="cp $IN $OUT";
+    echo $CMD;
+    [[ $DRY -eq 1 ]] || eval $CMD
+}
+
+routine__index-bowtie2 () 
+{ 
+    local GREF=${1:-$PWD};
+    mkdir -p $GREF/BOWTIE2_INDEX;
+    bowtie2-build -f $GREF/genome.fa $GREF/BOWTIE2_INDEX/genome
+}
+export -f routine__index-bowtie2
 

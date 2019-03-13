@@ -19,15 +19,17 @@ routine_mast()
     [[ $DRY -eq 1 ]] || $CMD 2>&1 | tee $ODIR/${PROG}.log
 }   
 
+
+
 main()
 {
-    set -e
+#     set -e
     local PROG=ame
     local IN=$1
-    local DB_MEME=${@:2}
+#     INF="$1"
+#     local DB_MEME=${@:2}
     DB_MEME=${DB_MEME:-$DB_MOTIF}
-    checkVars IN DB_MEME
-
+    source checkVars IN DB_MEME
     IN=`readlink -f $IN`
     ODIR="PROG=${PROG}_`bname $IN`_`basename -a $DB_MEME | tr '\n' '_' | tr '.' '-'`"
     

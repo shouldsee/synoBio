@@ -25,6 +25,13 @@ export IDX_HISAT2=${A%%.*}
 export DB_MOTIF=" \
 /home/feng/ref/motif/CIS-BP/Brachypodium_distachyon.meme \
 /home/feng/ref/motif/ARABD/ArabidopsisPBM_20140210.meme"
+
+export DEFLINE=$(echo $REF/annotation/*defline.txt)
+
+export GENE2NAME=$(echo $REF/annotation/*.synonym.txt)
+
+export ANNOINFO=$(echo $REF/annotation/*.annotation_info.txt)
+
 #/home/feng/ref/motif/ARABD/ArabidopsisDAPv1.meme \
 
 # checkVars GTF GFF GSIZE FA_ADAPTER REF IDX_BOWTIE2

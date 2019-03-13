@@ -14,6 +14,8 @@ import os, sys, datetime, glob, re
 import multiprocessing as mp
 import pandas as pd
 import synotil.ptn as ptn
+import pymisca.ext as pyext
+import pymisca.util__fileDict
 
 
 import itertools
@@ -151,7 +153,8 @@ def shellexec(cmd,debug=0):
         return subprocess.call(cmd,shell=1)
 #         return os.system(cmd)
 
-def process_rna_sample(samplePATH, debug=0,force=0):
+def process_rna_sample(samplePATH, debug=0,force=0, timestamp=1, newDir=1,NCORE=6,
+                      moveRaw=1,rename=0):
     '''
     Pull together raw reads from an input folder
     Args:
@@ -181,7 +184,7 @@ def process_rna_sample(samplePATH, debug=0,force=0):
     OLDPATH = sp[0]
     os.system('echo %s>OLDPATH' % OLDPATH)
     if not force:
-        pats = [ptn.runCond,'SRR/SRR\d{7,8}']
+        pats = [ptn.runCond, 'SRR/SRR\d{7,8}' ]
         res = [ re.findall(pat, ridPath,) for pat in pats]
         assert max(map(len,res))==1,\
         '[ERROR] Cannot extract RunID from Accession:"{ridPath}"\
@@ -193,35 +196,48 @@ def process_rna_sample(samplePATH, debug=0,force=0):
     
     print '[ridPath]',ridPath
 
-    # Create a temporary directory 
-    os.system('mkdir -p %s'%WORKING_DIR)
-    temp_dir = os.path.join(WORKING_DIR,
-                            '%s-%s'%(
-                                ridPath.replace('/','-'),
-#                                 os.path.basename(samplePATH),
-                                datenow(),
-                            )
-    )
-    os.system('mkdir -p %s'%temp_dir)
+
 
     
 
     
     #### Download raw read .fastq from samplePATH
 #     print samplePATH
-    FILES = glob.glob('%s/*' % samplePATH)
-    FILES = sum(map(LeafFiles,FILES),[])
-#     ccmd = '%s/* -t %s'%(samplePATH,temp_dir) 
-    ccmd = '%s -t %s'%(' '.join(FILES), temp_dir) 
-    cmd1 = 'cp -lr %s'%ccmd; 
-    cmd2 = 'cp -r %s'%ccmd
-    shellexec(cmd1) ==0 or shellexec(cmd2) 
-    ODIR = os.getcwd()
-    print '[ODIR]',ODIR
 #     try:
-    if 1:
+    def filterFastq(FILES):
+        FILES = filter(re.compile('.*\.(fastq)(\.gz|)').match, FILES)
+        return FILES
+    ODIR = os.getcwd()
+    os.system('mkdir -p %s'%WORKING_DIR)
+    if newDir:
+        if isinstance(newDir,basestring):
+            temp_dir = newDir
+        else:
+            # Create a temporary directory 
+            DIR = [ridPath.replace('/','-')]
+            if timestamp:
+                DIR +=  [str(datenow())]
+            DIR = '-'.join(DIR)
+            temp_dir = os.path.join(WORKING_DIR,
+                                    DIR,
+            )
+            
+        os.system('mkdir -p %s'%temp_dir)          
         os.chdir(temp_dir) #     shellexec('cd %s'%temp_dir)
+    if 1:
+        FILES = glob.glob('%s/*' % samplePATH)
+        FILES = sum(map(LeafFiles,FILES),[])
+        FILES = filterFastq(FILES)
+    #     ccmd = '%s/* -t %s'%(samplePATH,temp_dir) 
+        ccmd = '%s -t ./'%(' '.join(FILES),) 
+        cmd1 = 'cp -lr %s'%ccmd; 
+        cmd2 = 'cp -r %s'%ccmd
+        shellexec(cmd1) ==0 or shellexec(cmd2) 
 
+        print '[ODIR]',ODIR
+        
+#     if 1:
+        
         #### Parse .fastq filenames and assert quality checks
 #         print '[MSG] found leaves','\n'.join(FILES)
         if debug:
@@ -232,11 +248,15 @@ def process_rna_sample(samplePATH, debug=0,force=0):
     #         assert 0
         else:
             FS = glob.glob('*')
+            FS = filterFastq(FS)
+            
         BUF = '\n'.join(FS)
         BUFHEAD = '\n'.join(FS[:5])
         ##### Process baseSpace files
         res = {
-            x:len(re.findall( getattr(ptn,x),BUFHEAD)) for x in ['baseSpace','srr'] }
+            x:len(re.findall( getattr(ptn,x),BUFHEAD)) for x in ['baseSpace',
+                                                                 'baseSpaceSimple',
+                                                                 'srr'] }
         if debug:
             print res.items()
         assert max(res.values())>0,'Cannot identify format of files:\n%s'%BUF
@@ -249,11 +269,17 @@ def process_rna_sample(samplePATH, debug=0,force=0):
         if patName =='baseSpace':
             meta = check_L004(meta)
             meta = meta.sort_values(['lead','read','chunk'])
+        elif patName == 'baseSpaceSimple':
+            meta = meta            
         elif patName=='srr':
             meta = meta
         meta  = meta__unzip(meta,debug=debug)
         meta = meta__concat(meta,debug=debug)
-        meta = meta__moveRaw(meta,debug=debug)
+        if moveRaw:
+            meta = meta__moveRaw(meta,debug=debug)
+        if rename:
+            meta = meta__rename(meta,debug=debug)
+            
         meta.insert(0,'DataAccPath', DataAccPath)
         meta.insert(1,'DataAcc', DataAccPath.replace('/','-'))
         print ('[OLDDIR]',ridPath,os.system('echo %s | tee OLDDIR | tee DATAACC'%ridPath))
@@ -261,6 +287,9 @@ def process_rna_sample(samplePATH, debug=0,force=0):
         print '[DONE!]:%s'%samplePATH
         meta.to_json('META.json',orient='records')
         meta.to_csv('META.csv')
+        pymisca.util__fileDict.main(ofname='FILE.json',
+                                    argD=next(pyext.df__iterdict(meta)))
+
 
         if debug:
             print meta[['read','fname']]
@@ -277,6 +306,9 @@ def process_rna_sample(samplePATH, debug=0,force=0):
 #         print(exc_type, fname, exc_tb.tb_lineno)
 #         raise e
 #     finally:
+#     import os
+    temp_dir = os.path.basename(os.getcwd())
+#     shellexec('basename `pwd`')
     if 1:
         os.chdir(ODIR)
     #### Stop here
@@ -309,7 +341,7 @@ def check_L004(meta):
         mout = mout[idx]
     return mout
 def meta__unzip(meta,debug=0):
-    idx= [x.endswith('gz') for x in meta['ext']]
+    idx= [x.endswith('gz') for x in meta['fname']]
     if any(idx):
         #### unzip .gz where applicable
         mcurr = meta.iloc[idx]
@@ -320,7 +352,9 @@ def meta__unzip(meta,debug=0):
             mp_para(shellexec,cmds, ncore=NCORE)            
         #### Remove .gz in DataFrame accordingly
         meta.loc[idx,'ext'] = [ x.rstrip('.gz')  for x in mcurr['ext'] ]
+        meta.loc[idx,'fname'] = [ x.rstrip('.gz')  for x in mcurr['fname'] ]
     return meta
+
 def meta__moveRaw(meta,debug=0):
     shellexec('mkdir -p raw/')
     cmds = ['mv %s -t raw/'%(' '.join(meta.fname))]
@@ -330,6 +364,23 @@ def meta__moveRaw(meta,debug=0):
     else:
         mp_para(shellexec,cmds, ncore=NCORE)  
     return meta
+
+def meta__rename(meta,debug=0):
+#     shellexec('mkdir -p raw/')
+    cmds = []
+    for d in pyext.df__iterdict(meta):
+        d['ofname'] = 'R{read}.{ext}'.format(**d)
+        cmd = 'mv {fname} {ofname}'.format(**d)
+        cmds += [cmd]
+        meta.loc[d['Index'],'fname'] = d['ofname']
+#     cmds = ['mv %s -t raw/'%(' '.join(meta.fname))]
+#     meta['fname'] = meta.eval('@paste0([["raw/"],fname])')
+    if debug:
+        print '\n'.join(cmds)
+    else:
+        mp_para(shellexec, cmds, ncore=NCORE)  
+    return meta
+
 def meta__concat(meta,debug= 0):
     ### Map metas to fnames after decompression 
     if 'chunk' not in meta.keys():
@@ -380,13 +431,34 @@ assert len(sys.argv) >= 2,'''
         The folder should contains raw reads in .fastq(.gz) format
 '''
 
+import argparse
+parser=argparse.ArgumentParser()
+parser.add_argument('samplePATH',)
+parser.add_argument('--timestamp',action='store_true')
+parser.add_argument('--newDir',default=0,)
+parser.add_argument('--moveRaw',default=0,type=bool)
+parser.add_argument('--rename',default=0,type=bool)
+parser.add_argument('--force',action='store_true')
+parser.add_argument('--debug',action='store_true')
+parser.add_argument('--NCORE',default=6,type=int)
+# 'raw-data/900R/S1'
+# argparse.Aru
+
+main = process_rna_sample
 if __name__=='__main__':
-    NCORE = int(os.environ.get('NCORE',6))
-    print '[NCORE]=',NCORE
+#     NCORE = int(os.environ.get('NCORE',6))
+#     print '[NCORE]=',NCORE
     # NCORE = 1
     samplePATH = sys.argv[1]
-    temp_dir = process_rna_sample( samplePATH, force=0,debug=0
-                                 )
+    args = parser.parse_args()
+    NCORE = args.NCORE
+    temp_dir = process_rna_sample(**vars(args))
+#     timestamp=1, newDir=1
+
+#     temp_dir = process_rna_sample( samplePATH, force=0,
+#                                   debug=0
+#                                  )
+    
 #     for i in range(10):
 #         os.system('sleep 0.5')
 #         print i*0.5

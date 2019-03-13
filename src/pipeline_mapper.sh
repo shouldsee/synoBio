@@ -78,7 +78,7 @@ main()
     {
         #### echo ==== Downloading fastq files
         mkdir -p $OUTDIR
-        ARR=(`preprocessor.py $ID | tee -a bulk.log`)
+        ARR=(`logRun preprocessor.py $ID | tee -a bulk.log`)
     #     echo ${ARR[@]}
         TEMPDIR=${ARR[-1]}
         echo "[TEMPDIR]=$TEMPDIR"
@@ -97,12 +97,17 @@ main()
     }
 #     return 0
     
+
     {
         #### echo ==== Uploading outputs
         OUTALI=${PROG%.*}/$OLDDIR
-        mkdir -p $OUTDIR/$OUTALI
-#         cp output/* $OUTDIR/$OUTALI
-        cpLink output/* $OUTDIR/$OUTALI
+
+        INDIR=$PWD
+        uploadOutput.sh $INDIR $OUTDIR/${PROG%.*}
+#         read OUTALI< $INDIR/DATAACC
+#         mkdir -p $OUTDIR/$OUTALI
+# #         cp output/* $OUTDIR/$OUTALI
+#         cpLink output/* $OUTDIR/$OUTALI
     }  
     cd ..
     echo "[FINISH]: Outputed to $OUTDIR/$OUTALI"

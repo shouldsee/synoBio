@@ -10,7 +10,7 @@
 
 
 import tempfile,subprocess
-import os, sys, datetime, glob, re
+import os, sys, datetime, glob, re, collections
 import multiprocessing as mp
 import pandas as pd
 import synotil.ptn as ptn
@@ -153,7 +153,9 @@ def shellexec(cmd,debug=0):
         return subprocess.call(cmd,shell=1)
 #         return os.system(cmd)
 
-def process_rna_sample(samplePATH, debug=0,force=0, timestamp=1, newDir=1,NCORE=6,
+def process_rna_sample(samplePATH, debug=0,force=0, timestamp=1, 
+                       newDir=None,autoNewDir = None,
+                       NCORE=6,
                       moveRaw=1,rename=0):
     '''
     Pull together raw reads from an input folder
@@ -209,21 +211,25 @@ def process_rna_sample(samplePATH, debug=0,force=0, timestamp=1, newDir=1,NCORE=
         return FILES
     ODIR = os.getcwd()
     os.system('mkdir -p %s'%WORKING_DIR)
-    if newDir:
-        if isinstance(newDir,basestring):
-            temp_dir = newDir
-        else:
-            # Create a temporary directory 
-            DIR = [ridPath.replace('/','-')]
-            if timestamp:
-                DIR +=  [str(datenow())]
-            DIR = '-'.join(DIR)
-            temp_dir = os.path.join(WORKING_DIR,
-                                    DIR,
-            )
-            
-        os.system('mkdir -p %s'%temp_dir)          
-        os.chdir(temp_dir) #     shellexec('cd %s'%temp_dir)
+#     if newDir:
+    assert newDir,'must not be empty'
+    if autoNewDir:
+#     else:
+        # Create a temporary directory 
+        DIR = [ridPath.replace('/','-')]
+        if timestamp:
+            DIR +=  [str(datenow())]
+        DIR = '-'.join(DIR)
+        temp_dir = os.path.join(WORKING_DIR,
+                                DIR,
+        )
+    else: 
+#     if isinstance(newDir,basestring):
+        temp_dir = newDir
+
+    shellexec('mkdir -p %s'%temp_dir)
+#         os.system('mkdir -p %s'%temp_dir)          
+    os.chdir(temp_dir) #     shellexec('cd %s'%temp_dir)
     if 1:
         FILES = glob.glob('%s/*' % samplePATH)
         FILES = sum(map(LeafFiles,FILES),[])
@@ -253,14 +259,16 @@ def process_rna_sample(samplePATH, debug=0,force=0, timestamp=1, newDir=1,NCORE=
         BUF = '\n'.join(FS)
         BUFHEAD = '\n'.join(FS[:5])
         ##### Process baseSpace files
-        res = {
-            x:len(re.findall( getattr(ptn,x),BUFHEAD)) for x in ['baseSpace',
+        res = [
+            [x,len(re.findall( getattr(ptn,x),BUFHEAD))] for x in ['baseSpace',
                                                                  'baseSpaceSimple',
-                                                                 'srr'] }
+                                                                 'srr'] ]
+        res = collections.OrderedDict(res)
         if debug:
             print res.items()
         assert max(res.values())>0,'Cannot identify format of files:\n%s'%BUF
         patName, pat = [(x,getattr(ptn,x)) for x,y in res.items() if y > 0][0]
+        print ('[patternName]',patName)
         PARSED = [dict(m.groupdict().items() + 
                        [('fname',m.group(0))])
                  for m in re.finditer(pat,BUF) ]
@@ -349,7 +357,7 @@ def meta__unzip(meta,debug=0):
         if debug:
             print '\n'.join(cmds[:1])
         else:
-            mp_para(shellexec,cmds, ncore=NCORE)            
+            mp_para(shellexec, cmds, ncore=NCORE)            
         #### Remove .gz in DataFrame accordingly
         meta.loc[idx,'ext'] = [ x.rstrip('.gz')  for x in mcurr['ext'] ]
         meta.loc[idx,'fname'] = [ x.rstrip('.gz')  for x in mcurr['fname'] ]
@@ -408,13 +416,13 @@ def cmd_combineFastq(df,run=0):
 #     d = ptn.baseSpace.match(fnames[0]).groupdict()
     lead,read,ext=df.head(1)[['lead','read','ext']].values.ravel()
     ofname = '{lead}_R{read}_raw.{ext}'.format(**locals())
-    cmd = 'cat {fflat} >{ofname} ; sleep 0; rm {fflat} '.format(
+    cmd = 'cat {fflat} >{ofname} ; sleep 0; rm -f {fflat} '.format(
         **locals())
 #     df['cmd'] = cmd
 #     df['ofname'] = ofname
     return pd.Series({'fname':ofname,'cmd':cmd})
 
-# def cmd_combineFastq(fnames,run=0):
+# def cmd_combineFastq(fnames,run=0):cc
 #     fnames = sorted(list(fnames))
 #     d = ptn.baseSpace.match(fnames[0]).groupdict()
 #     cmd = 'cat {IN} >{lead}_R{read}_raw.{ext} ; sleep 0; rm {IN} '.format(
@@ -423,7 +431,7 @@ def cmd_combineFastq(df,run=0):
 #     return cmd
 
 def cmd_ungzip(F,):
-    cmd = 'gzip -d <{IN} >{OUT} ; sleep 0 ; rm {IN} '.format(IN=F,OUT=F.rstrip('.gz'))
+    cmd = 'gzip -d <{IN} >{OUT} ; sleep 0 ; rm -f {IN} '.format(IN=F,OUT=F.rstrip('.gz'))
     return cmd
 
 assert len(sys.argv) >= 2,'''
@@ -435,7 +443,8 @@ import argparse
 parser=argparse.ArgumentParser()
 parser.add_argument('samplePATH',)
 parser.add_argument('--timestamp',action='store_true')
-parser.add_argument('--newDir',default=0,)
+parser.add_argument('--newDir',default='.',)
+parser.add_argument('--autoNewDir',default=0,type=bool)
 parser.add_argument('--moveRaw',default=0,type=bool)
 parser.add_argument('--rename',default=0,type=bool)
 parser.add_argument('--force',action='store_true')

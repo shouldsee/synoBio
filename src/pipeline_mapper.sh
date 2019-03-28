@@ -15,7 +15,8 @@ main()
     output_file=""
     PAIR=0
     NCORE=4
-
+    local DOWNLOADED=0
+    
     show_help(){
         echo "
     Usage:
@@ -40,9 +41,10 @@ main()
         show_help
         exit 0
     fi
+    
 
     OPTIND=1         # Reset in case getopts has been used previously in the shell.
-    while getopts "h?pt:" opt; do
+    while getopts "h?pt:d" opt; do
         case "$opt" in
         h|\?)
             show_help
@@ -51,6 +53,7 @@ main()
         p)  PAIR=1
             ;;
         t)  NCORE=$OPTARG
+        d)  DOWNLOADED=1
         esac
     done
     shift $((OPTIND-1))
@@ -78,7 +81,7 @@ main()
     {
         #### echo ==== Downloading fastq files
         mkdir -p $OUTDIR
-        ARR=(`logRun preprocessor.py $ID | tee -a bulk.log`)
+        ARR=(`logRun preprocessor.py --autoNewDir 1 --moveRaw 1 $ID | tee -a bulk.log`)
     #     echo ${ARR[@]}
         TEMPDIR=${ARR[-1]}
         echo "[TEMPDIR]=$TEMPDIR"

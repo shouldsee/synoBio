@@ -19,7 +19,7 @@ main()
     NCORE=${2:-4}
 
     read ALI1 ALI1 PHRED <<< $(check_PE $read1 $read1)
-    if [ "$PHRED"="solexa64" ]; then PHRED=phred64; fi
+    if [ "$PHRED" = "solexa64" ]; then PHRED=phred64; fi
     ALI=${ALI1%_R1_*}
 
     echo Using $NCORE threads

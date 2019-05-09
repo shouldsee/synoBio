@@ -10,17 +10,18 @@ main(){
     #### check util.sh::bamqc()  util.sh::bam2bigwig()
 
     local INPUT=$1
-#     local NCORE=${2:-6}
-    [[ -z "$NCORE" ]] && {         
-        local DFT=3
-        echo [DEFAULT] NCORE not set, default to $DFT
-        NCORE=$DFT
-        } #         && return 0    
-    checkVars GTF NCORE
+    local NCORE=${2:-6}
+#     [[ -z "$NCORE" ]] && {         
+#         local DFT=3
+#         echo [DEFAULT] NCORE not set, default to $DFT
+#         export NCORE=$DFT
+#         } #         && return 0    
+    checkVars GTF
     
     local ALI=$(bname $INPUT)
     local OPTS="-p $NCORE --rf -e"
-    local CMD="stringtie $OPTS  ${ALI}.bam -G $GTF -o ${ALI}.stringtie.gtf -A ${ALI}.stringtie.count &> ${ALI}.stringtie.log"   
+    local CMD="stringtie $OPTS ${ALI}.bam -G $GTF -o ${ALI}.stringtie.gtf -A ${ALI}.stringtie.count &> ${ALI}.stringtie.log"
+    
     local MSG="Transcript assembly with $PROG"
     
     echo "===== Starting $MSG ====="

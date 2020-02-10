@@ -11,21 +11,22 @@ The two following components have been split since August 8th 2018 for modularit
 - Create a new environment:
 
 ```sh
-ORIG=$PWD
-mkdir myEnv
-cd myEnv
-source $ORIG/src/init.sh
+git clone https://github.com/shouldsee/synoBio /tmp/synoBio_src
+mkdir /tmp/myEnv
+cd /tmp/myEnv
+source /tmp/synoBio_src/init.sh
 ```
 
 - Activate your environment
 
 ```sh
-source myEnv/activate.sh
+source /tmp/myEnv/activate.sh
 ```
 
 - Align your samples 
 
 ```sh
-mkdir -p temp; cd temp
-pipeline_rnaseq.sh $ORIG/test/test_R1_.fastq $ORIG/test/test_R1_.fastq
+SRC=/tmp/synoBio_src
+mkdir -p ./temp_job; cd ./temp_job
+/tmp/myEnv/bin/pipeline_rnaseq.sh $SRC/examples/data/test_R1_.fastq $SRC/examples/data/test_R1_.fastq
 ```

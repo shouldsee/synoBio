@@ -23,7 +23,7 @@ A=$(ls -1 $REF/sequence/HISAT2Index/* | head -1)
 export IDX_HISAT2=${A%%.*}
 
 export DB_MOTIF=" \
-/home/birte/ref/motif/ARABD/ArabidopsisPBM_20140210.meme\
+/home/birte/IGZ_data/ref/motif/ARABD/ArabidopsisPBM_20140210.meme\
 "
 #/home/feng/ref/motif/CIS-BP/Brachypodium_distachyon.meme \
 

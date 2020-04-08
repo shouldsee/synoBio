@@ -28,9 +28,11 @@ ln -sf /home/birte/IGZ_data/software/picard.jar $JARLIB #Birte: different from b
 ln -sf /home/birte/IGZ_data/software/stringtie-2.1.1.Linux_x86_64/stringtie $ENVDIR/bin
 ### Samtools
 ln -sf /home/birte/IGZ_data/software/samtools-1.10/samtools $ENVDIR/bin #Birte: not tested yet if this works
+### FASTQC
+ln -sf /home/birte/IGZ_data/software/FASTQC/fastqc $ENVDIR/bin #Birte: not tested yet if this works
 
-##### Assumed installed
-# fastqc
+#     ##### Assumed installed
+#     # fastqc
 # pip install --user pyfaidx
 echo ---- Installing binaries
 ############################################

@@ -1,4 +1,5 @@
 #!/usr/bin/env python2
+'''
 # Usage: (python) preprocessor.py /path/to/FASTQ_DIR
 # Example: preprocessor.py /media/pw_synology3/PW_HiSeq_data/RNA-seq/Raw_data/testONLY/133R/BdPIFs-32747730/133E_23_DN-40235206
 # Purpose: Download fastq files from the supplied path and 
@@ -7,18 +8,59 @@
 # Created:7  OCT 2016, Hui@SLCU map-RNA-seq.py
 # Update: 11 Feb 2017. Hui@SLCU
 # Update: 29 May 2018. Feng@SLCU preprocessor.py
+# Update: 08 Apr 2020. Feng
 
+Example Usage:
+    fastq_preprocess test_data --newDIR test_out
+    preprocessor.py test_data --newDIR test_out
+Install:
+    python -m pip install "pip>=19.0" --upgrade
+    python -m pip install fastq_preprocessor@https://github.com/shouldsee/fastq_preprocessor/tarball/0.0.2
+
+
+CHANGELOG:
+# 0.0.2
+- fixed a bug for concatenating fastq files
+'''
 
 import tempfile,subprocess
 import os, sys, datetime, glob, re, collections
 import multiprocessing as mp
 import pandas as pd
-import synotil.ptn as ptn
-import pymisca.ext as pyext
-import pymisca.util__fileDict
-
-
 import itertools
+import re
+import json
+from path import Path
+
+class pyext(object):
+    @staticmethod
+    def df__iterdict(self, into=dict):
+        '''
+        ### See github issue https://github.com/pandas-dev/pandas/issues/25973#issuecomment-482994387
+        '''
+        it = self.iterrows()
+        for index, series in it:
+            d = series.to_dict(into=into)
+            d['index'] = index
+            yield d
+
+class ptn(object):
+    Rcomp=re.compile
+
+    ridL = r'(^|.+/)(\d{1,4}[RCQ]{1,2}|SRR\d{7,8}'
+    # ridL = r'(\d{1,4}[RC]'
+    end = r'[_/\-]'
+    runID = Rcomp('(?=%s)([^RCQ].*|$))'%(ridL,))
+    runCond = Rcomp('%s%s.*)'%(ridL,end))
+    ridPATH = Rcomp('%s%s.*)'%(ridL,end))
+    runID_RNA = Rcomp('.*%s).*'%(ridL.replace('C',''),))
+
+    srr = Rcomp('(?P<lead>SRR.*)_(?P<read>[012]).(?P<ext>.+)')
+    baseSpace = Rcomp('(?P<lead>.*)_L(?P<chunk>\d+)_R(?P<read>[012])_(?P<trail>\d{1,4})\.(?P<ext>.+)')
+    baseSpaceSimple = Rcomp('(?P<lead>.*)_R(?P<read>[012])_(?P<trail>\d{1,4})\.(?P<ext>.+)')
+    sampleID = Rcomp('[_\/](S\d{1,3}|SRR\d{7,8})[_/\-\.]')
+
+    BdAcc = Rcomp('(Bradi[\da-zA-Z]+)')
 # shellexec = os.system
 def paste0(ss,sep=None,na_rep=None,castF=unicode):
     '''Analogy to R paste0
@@ -170,7 +212,8 @@ def process_rna_sample(samplePATH, debug=0,force=0, timestamp=1,
     #                           shell=True)
     
 
-    samplePATH = samplePATH.rstrip('/')
+    samplePATH = os.path.realpath(samplePATH)
+    # .rstrip('/')
     shellexec('echo $SHELL')
     
     RNA_SEQ_MAP_FILE = 'some-script.sh'
@@ -178,10 +221,9 @@ def process_rna_sample(samplePATH, debug=0,force=0, timestamp=1,
     WORKING_DIR='.'
     
     ### Extract  RunID from samplePATH
-    samplePATH = samplePATH.rstrip('/')
 #     ptn = '[\^/](\d{1,4}[RC][_/].*)'
 #     ridPath = re.findall(ptn,samplePATH)
-    sp = samplePATH.rsplit('/',2)
+    sp = samplePATH.rstrip('/').rsplit('/',2)
     DataAccPath = ridPath = '/'.join(sp[-2:])
     OLDPATH = sp[0]
     os.system('echo %s>OLDPATH' % OLDPATH)
@@ -281,12 +323,12 @@ def process_rna_sample(samplePATH, debug=0,force=0, timestamp=1,
             meta = meta            
         elif patName=='srr':
             meta = meta
-        meta  = meta__unzip(meta,debug=debug)
-        meta = meta__concat(meta,debug=debug)
+        meta  = meta__unzip(meta,NCORE,debug=debug)
+        meta = meta__concat(meta,NCORE,debug=debug)
         if moveRaw:
-            meta = meta__moveRaw(meta,debug=debug)
+            meta = meta__moveRaw(meta,NCORE, debug=debug)
         if rename:
-            meta = meta__rename(meta,debug=debug)
+            meta = meta__rename(meta,NCORE,debug=debug)
             
         meta.insert(0,'DataAccPath', DataAccPath)
         meta.insert(1,'DataAcc', DataAccPath.replace('/','-'))
@@ -295,8 +337,11 @@ def process_rna_sample(samplePATH, debug=0,force=0, timestamp=1,
         print '[DONE!]:%s'%samplePATH
         meta.to_json('META.json',orient='records')
         meta.to_csv('META.csv')
-        pymisca.util__fileDict.main(ofname='FILE.json',
-                                    argD=next(pyext.df__iterdict(meta)))
+        with open('FILE.json','w') as f:
+            d = next(pyext.df__iterdict(meta))
+            json.dump(d,f)
+        # pymisca.util__fileDict.main(ofname='FILE.json',
+        #                             argD=next(pyext.df__iterdict(meta)))
 
 
         if debug:
@@ -348,7 +393,7 @@ def check_L004(meta):
         print mout[~idx][['fname','chunk']] 
         mout = mout[idx]
     return mout
-def meta__unzip(meta,debug=0):
+def meta__unzip(meta,NCORE,debug=0):
     idx= [x.endswith('gz') for x in meta['fname']]
     if any(idx):
         #### unzip .gz where applicable
@@ -363,17 +408,19 @@ def meta__unzip(meta,debug=0):
         meta.loc[idx,'fname'] = [ x.rstrip('.gz')  for x in mcurr['fname'] ]
     return meta
 
-def meta__moveRaw(meta,debug=0):
+def meta__moveRaw(meta,NCORE,debug=0):
     shellexec('mkdir -p raw/')
     cmds = ['mv %s -t raw/'%(' '.join(meta.fname))]
-    meta['fname'] = meta.eval('@paste0([["raw/"],fname])')
+    meta['fname'] = paste0([["raw/"], meta["fname"]])
+    # meta["raw"]
+    # meta['fname'] = meta.eval('@paste0([["raw/"],fname])')
     if debug:
         print '\n'.join(cmds[:1])
     else:
         mp_para(shellexec,cmds, ncore=NCORE)  
     return meta
 
-def meta__rename(meta,debug=0):
+def meta__rename(meta,NCORE,debug=0):
 #     shellexec('mkdir -p raw/')
     cmds = []
     for d in pyext.df__iterdict(meta):
@@ -389,7 +436,7 @@ def meta__rename(meta,debug=0):
         mp_para(shellexec, cmds, ncore=NCORE)  
     return meta
 
-def meta__concat(meta,debug= 0):
+def meta__concat(meta,NCORE,debug= 0):
     ### Map metas to fnames after decompression 
     if 'chunk' not in meta.keys():
         return meta
@@ -454,11 +501,8 @@ parser.add_argument('--NCORE',default=6,type=int)
 # argparse.Aru
 
 main = process_rna_sample
-if __name__=='__main__':
-#     NCORE = int(os.environ.get('NCORE',6))
-#     print '[NCORE]=',NCORE
-    # NCORE = 1
-    samplePATH = sys.argv[1]
+
+def main_entry(args=None):
     args = parser.parse_args()
     NCORE = args.NCORE
     temp_dir = process_rna_sample(**vars(args))
@@ -474,3 +518,15 @@ if __name__=='__main__':
     # raise Exception('[WTF]%s'%temp_dir)
     print >>sys.stdout,temp_dir
     sys.exit(0)
+
+if __name__=='__main__':
+
+    main_entry()
+
+
+'''
+for F in origin/*
+do
+gzip -d <$F | head -n1000 | gzip > test_data/$(basename $F)
+done
+'''

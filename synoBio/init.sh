@@ -65,6 +65,8 @@ echo ---- Installing binaries
 ORIGIN=`readlink -f ${SELF%/*}`
 cp -u $ORIGIN/activate.sh bin/activate
 cp -u $ORIGIN/*.sh bin/
+cp -u $ORIGIN/checkVars bin/ # line added by Birte 04-2020
+cp -u $ORIGIN/logRun bin/ # line added by Birte 04-2020
 cp -uR $ORIGIN/config config
 echo export ORIGIN=$ORIGIN >> bin/activate
 

@@ -13,7 +13,7 @@ echo $DIR
 
 DIR=$(readlink -f $DIR)
 
-source ${DIR}/util.sh
+source ${DIR}/util.sh  ### this will add checkVars() and logRun() to environment.
 
 
 export ENVDIR=${DIR%/*}

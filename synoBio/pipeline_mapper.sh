@@ -91,7 +91,7 @@ main()
         #### echo ==== Running pipeline    
         cd $TEMPDIR
         ls -lh .
-        read OLDDIR < OLDDIR
+        # read OLDDIR < OLDDIR
         read FILEARG < FILEARG
         local CMD="$PROG -t $NCORE $FILEARG"
         echo [CMD]$CMD
@@ -103,17 +103,13 @@ main()
 
     {
         #### echo ==== Uploading outputs
-        OUTALI=${PROG%.*}/$OLDDIR
-
+        # OUTALI=${PROG%.*}/$OLDDIR
         INDIR=$PWD
-        uploadOutput.sh $INDIR $OUTDIR/${PROG%.*}
-#         read OUTALI< $INDIR/DATAACC
-#         mkdir -p $OUTDIR/$OUTALI
-# #         cp output/* $OUTDIR/$OUTALI
-#         cpLink output/* $OUTDIR/$OUTALI
+        ODIR=$OUTDIR/${PROG%.*}
+        uploadOutput.sh $INDIR $ODIR
+        echo "[FINISH]: Outputed to $ODIR"
     }  
     cd ..
-    echo "[FINISH]: Outputed to $OUTDIR/$OUTALI"
     
     #### Cache the scripts
     if [[ -n "$ORIGIN" ]]; then

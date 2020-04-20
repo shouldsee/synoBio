@@ -53,6 +53,7 @@ main()
         p)  PAIR=1
             ;;
         t)  NCORE=$OPTARG
+            ;;
         d)  DOWNLOADED=1
         esac
     done

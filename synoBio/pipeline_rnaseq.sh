@@ -34,8 +34,14 @@ main(){
     }
     
     {
+    
         echo "===== IMPORTANT VARS ====="
-        checkVars GNAME read1 read2 SELF LOGFILE 
+        set -eu
+        echo read1:$read1
+        echo read2:$read2
+        echo SELF:$SELF
+        echo LOGFILE:$LOGFILE     
+#         checkVars GNAME read1 read2 SELF LOGFILE 
         echo "===== Genome Vars ====="
         checkVars GSIZE FA_ADAPTER_PE REF IDX_HISAT2 
         #checkVars GTF  GFF 

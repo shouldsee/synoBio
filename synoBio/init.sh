@@ -14,13 +14,16 @@ mkdir -p $JARLIB
 ### Trimmomatic
 # must supply absolute paths
 TRIMDIR=/home/birte/IGZ_data/software/Trimmomatic-0.39
-printf '#!/usr/bin/env bash \njava -jar $TRIMDIR/trimmomatic-0.39.jar "$@"'>$ENVDIR/bin/trimmomatic
+#printf '#!/usr/bin/env bash \njava -jar $TRIMDIR/trimmomatic-0.39.jar "$@"'>$ENVDIR/bin/trimmomatic
+printf "#!/usr/bin/env bash \njava -jar $TRIMDIR/trimmomatic-0.39.jar \"\$@\"">$ENVDIR/bin/trimmomatic #Birte: needs outer double quotes, needs \ to preserve "$@" (inner double quotes)
 
 
 
 
 ### HISAT2
 ln -sf /home/birte/IGZ_data/software/hisat2-2.1.0/* $ENVDIR/bin
+### Bowtie2
+ln -sf /home/birte/IGZ_data/software/bowtie2-2.4.1-linux-x86_64/* $ENVDIR/bin #Birte: not tested yet if this works
 ### picard for dedup
 #ln -sf /home/Program_NGS_sl-pw-srv01/picard-tools-1.103/*.jar $JARLIB
 ln -sf /home/birte/IGZ_data/software/picard.jar $JARLIB #Birte: different from before logic, no picard-tools folder anymore

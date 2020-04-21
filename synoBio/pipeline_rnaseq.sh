@@ -10,11 +10,16 @@ main(){
     local SELF=`readlink -f ${BASH_SOURCE[0]}`
     local SELFALI=$(bname $SELF)
     
-    local read1 read2 reads PAIRED NCORE
+    # local read1 read2 reads PAIRED NCORE
     NCORE=6
     PAIR=0
     source bb__argparse.sh "$@"
     shift "$((OPTIND-1))"
+    export read1
+    export read2
+    export reads
+    export PAIRED
+    export NCORE
     
     ### Kind of weird here...
 #     source $(dirname $SELF)/activate

@@ -37,7 +37,8 @@ main(){
     ALI=$ali
 
     CMD="java -XX:ParallelGCThreads=$NCORE -jar"
-    CMD="$CMD $JARLIB/MarkDuplicates.jar"
+    #CMD="$CMD $JARLIB/MarkDuplicates.jar"
+    CMD="$CMD $JARLIB/picard.jar MarkDuplicates" #birte: adjustment to picard v. 2.22.1
     CMD="$CMD I=$read1 O=${ali}_dedup.bam M=${ali}.dupstat.log"
     CMD="$CMD REMOVE_DUPLICATES=true "
     echo $CMD

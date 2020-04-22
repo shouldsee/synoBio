@@ -7,7 +7,8 @@ logRun(){
 
 main(){
 
-    local SELF=`readlink -f ${BASH_SOURCE[0]}`
+    #   local SELF=`readlink -f ${BASH_SOURCE[0]}`
+    SELF=`readlink -f ${BASH_SOURCE[0]}
     local SELFALI=$(bname $SELF)
     
     # local read1 read2 reads PAIRED NCORE
@@ -20,6 +21,8 @@ main(){
     export reads
     export PAIRED
     export NCORE
+    export SELF
+    export LOGFILE
     
     ### Kind of weird here...
 #     source $(dirname $SELF)/activate
@@ -31,7 +34,8 @@ main(){
         local ALI1=`basename ${read1%.*}`
         local fqALI=${ALI1%_R1_*}
         local ALI=${fqALI}_${GNAME}
-        local LOGFILE=${ALI}.${SELFALI}.log
+    #    local LOGFILE=${ALI}.${SELFALI}.log
+        LOGFILE=${ALI}.${SELFALI}.log
         
     #         echo $ALI1; echo $ALI2; echo $ALI
         echo []Proposed alias ${ALI} ==

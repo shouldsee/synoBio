@@ -85,13 +85,14 @@ check_PE() {
   ali1=${ali1%.*}
   ali2=$(basename $read2)
   ali2=${ali2%.*}
-  echo $ali1
-  echo $ali2
+  #echo $ali1 #birte
+  #echo $ali2 #birte
   assert $(guessPhred $read1)=$(guessPhred $read2) $LINENO
   PHRED=$(guessPhred $read1)
   PHRED=${PHRED/+/''}
   PHRED=${PHRED,,}
-  echo $PHRED
+  #echo $PHRED #birte
+  echo "$ali1 $ali2 $PHRED" # birte 04-2020
 }
 export -f check_PE
 

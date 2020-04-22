@@ -26,5 +26,8 @@ export PATH="$PATH:$DIR:$ENVDIR"
 {
   which hisat2 || echo hisat2 not found
   which bowtie2 || echo bowtie2 not found
-  #which trimmomatic  || echo trimmomatic not found
+  which trimmomatic  || echo trimmomatic not found
+  which fastqc || echo fastqc not found
+  which stringtie || echo stringtie not found
+  which samtools || echo samtools not found
 }

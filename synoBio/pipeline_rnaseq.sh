@@ -8,7 +8,7 @@ logRun(){
 main(){
 
     #   local SELF=`readlink -f ${BASH_SOURCE[0]}`
-    SELF=`readlink -f ${BASH_SOURCE[0]}
+    SELF=`readlink -f ${BASH_SOURCE[0]}`
     local SELFALI=$(bname $SELF)
     
     # local read1 read2 reads PAIRED NCORE

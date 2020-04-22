@@ -17,9 +17,6 @@ TRIMDIR=/home/birte/IGZ_data/software/Trimmomatic-0.39
 #printf '#!/usr/bin/env bash \njava -jar $TRIMDIR/trimmomatic-0.39.jar "$@"'>$ENVDIR/bin/trimmomatic
 printf "#!/usr/bin/env bash \njava -jar $TRIMDIR/trimmomatic-0.39.jar \"\$@\"">$ENVDIR/bin/trimmomatic #Birte: needs outer double quotes, needs \ to preserve "$@" (inner double quotes)
 
-
-
-
 ### HISAT2
 ln -sf /home/birte/IGZ_data/software/hisat2-2.1.0/* $ENVDIR/bin
 ### Bowtie2
@@ -32,10 +29,12 @@ ln -sf /home/birte/IGZ_data/software/stringtie-2.1.1.Linux_x86_64/stringtie $ENV
 ### Samtools
 ln -sf /home/birte/IGZ_data/software/samtools-1.10/samtools $ENVDIR/bin #Birte: not tested yet if this works
 ### FASTQC
-ln -sf /home/birte/IGZ_data/software/FASTQC/fastqc $ENVDIR/bin #Birte: not tested yet if this works
+# ln -sf /home/birte/IGZ_data/software/FASTQC/fastqc $ENVDIR/bin #Birte: fastq dependency not working like this, use trimmomatic strategy
+FASTQCDIR=/home/birte/IGZ_data/software/FastQC #Birte 04-2020
+printf "#!/usr/bin/env bash \n$FASTQCDIR/fastqc \"\$@\"">$ENVDIR/bin/fastqc #Birte 04-2020
 
-#     ##### Assumed installed
-#     # fastqc
+#     ##### Assumed installed 
+#     # fastqc #Birte: no longer assumed
 # pip install --user pyfaidx
 echo ---- Installing binaries
 ############################################

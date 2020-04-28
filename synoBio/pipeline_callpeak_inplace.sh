@@ -1,6 +1,7 @@
 
 main(){
 	IN=`readlink -f $1`
+	CHIPREF=${2:-$CHIPREF}  ### use arg2 to override if available
 	DIR=`dirname $IN`;
 	[[ -z "$CHIPREF" ]] && { echo CHIPREF not set; } && return 0
 	{
